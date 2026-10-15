@@ -248,6 +248,7 @@ h2.sec{margin:14px 0 8px}   /* the section headings are h2 for screen-reader nav
     <img class="logo" src="blitz-logo.png" alt="" width="56" height="56">
   </div>
   <div class="sechd"><h2 class="sec" data-i18n="sec_taxon">Species group</h2></div>
+  <p style="font-size:12px;line-height:1.5;margin:0 0 12px"><a id="embeddingAtlas" href="https://wietzesuijker.github.io/what-to-id/embeddings.html" style="color:var(--acc)" data-i18n="embedding_atlas">Explore photo embeddings in this area</a><br><span data-i18n="embedding_scope">BC sample, ten life groups. Visual resemblance is separate from priority.</span></p>
   <select id="taxon" class="full" data-i18n-aria="aria_lifegroup" aria-label="Species group" style="margin-bottom:8px"></select>
   <div class="sechd"><h2 class="sec" data-i18n="sec_goal">Goal</h2><span class="infobtn" data-i18n-title="info_btn" title="Where do these scores come from?" role="button" tabindex="0" data-i18n-aria="aria_about_data" aria-label="About the data" aria-expanded="false" onclick="const b=document.getElementById('taxinfo').classList.toggle('open');this.setAttribute('aria-expanded',b)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">i</span></div>
   <div class="infobox" id="taxinfo" data-i18n-html="taxinfo"></div>
@@ -357,6 +358,7 @@ const I18N={
     title_full:`Where to<br><a href="https://blitzthegap.org" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline">Blitz the Gap</a>`,
     sub:"Choose what counts as <b>impact</b>, then <b>explore</b> the priority map — or <b>plan a trip</b> to the best spot you can reach and get back from.",
     sec_group:"Life group & goal", sec_taxon:"Species group", sec_goal:"Goal", goal_inactive:"The map is showing iNaturalist records. Pick a goal to go back to the goal map.",
+    embedding_atlas:"Explore photo embeddings in this area", embedding_scope:"BC sample, ten life groups. Visual resemblance is separate from priority.",
     info_btn:"Where do these scores come from?",
     taxinfo:`<b style="color:var(--ink)">Higher priority = a place where one new sighting adds more to what we know.</b> Canada-wide, on an equal-area grid: 25&nbsp;km cells, 5&nbsp;km when you zoom in. <b>How impact is scored</b>, top right, lists the data behind each goal. Cells with no records at all share the top of the scale and are not ranked against each other. <a href="https://blitzthegap.org" target="_blank" rel="noopener" style="color:var(--acc)">How Blitz the Gap works →</a>`,
     finetune:"Fine-tune the five goals",
@@ -502,6 +504,7 @@ const I18N={
     title_full:`Où aller pour<br><a href="https://blitzthegap.org" target="_blank" rel="noopener" style="color:var(--acc);text-decoration:underline">Blitz the Gap</a>`,
     sub:"Choisissez ce qui compte comme <b>impact</b>, puis <b>explorez</b> la carte des priorités — ou <b>planifiez une sortie</b> vers le meilleur endroit que vous pouvez atteindre et d'où vous pouvez revenir.",
     sec_group:"Groupe d'espèces et objectif", sec_taxon:"Groupe d'espèces", sec_goal:"Objectif", goal_inactive:"La carte affiche les observations iNaturalist. Choisissez un objectif pour revenir à la carte des objectifs.",
+    embedding_atlas:"Explorer les représentations des photos ici", embedding_scope:"Échantillon de C.-B., dix groupes. La ressemblance visuelle est distincte de la priorité.",
     info_btn:"D'où viennent ces scores?",
     taxinfo:`<b style="color:var(--ink)">Priorité élevée = un endroit où une nouvelle observation ajoute le plus à nos connaissances.</b> À l'échelle du Canada, sur une grille à surface égale&nbsp;: cellules de 25&nbsp;km, 5&nbsp;km en zoomant. <b>Calcul de l'impact</b>, en haut à droite, donne les données derrière chaque objectif. Les cellules sans aucune observation partagent le haut de l'échelle et ne sont pas classées entre elles. <a href="https://blitzthegap.org" target="_blank" rel="noopener" style="color:var(--acc)">Fonctionnement de Blitz the Gap →</a>`,
     finetune:"Ajuster les cinq objectifs",
@@ -1109,6 +1112,20 @@ let markers=[], routeLine=null, destMarker=null, destCell=null, lastFit=null, la
 const VAN=[49.28,-123.12];
 const w0={}; OBJ.forEach((o,i)=>w0[o.key]=DEFAULT[i]);
 const state={taxon:(FILES["All biodiversity"]?"All biodiversity":Object.keys(FILES)[0]), w:w0, start:VAN.slice(), budget:5, maxLeg:0, minRatio:0.5, unit:'Hours', lowc:false, mode:'Walk', modeSet:false, startProsp:false, view:'explore', startSet:false, planMode:'auto', project:'blitz-the-gap-2026-general'};
+function embeddingAtlasURL(bounds,group){
+  const url=new URL('https://wietzesuijker.github.io/what-to-id/embeddings.html');
+  if(group!=='All biodiversity')url.searchParams.set('group',group);
+  const west=bounds.getWest(),east=bounds.getEast();
+  // A world-spanning or antimeridian view should open the full sample.
+  if(east-west<360&&west>=-180&&east<=180&&west<east){
+    url.searchParams.set('bbox',[west,Math.max(-90,bounds.getSouth()),east,Math.min(90,bounds.getNorth())].map(v=>v.toFixed(5)).join(','));
+  }
+  return url.href;
+}
+function updateEmbeddingAtlas(){document.getElementById('embeddingAtlas').href=embeddingAtlasURL(map.getBounds(),state.taxon);}
+map.on('moveend',updateEmbeddingAtlas);
+document.getElementById('taxon').addEventListener('change',()=>queueMicrotask(updateEmbeddingAtlas));
+updateEmbeddingAtlas();
 function debounce(fn,ms){let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};}
 const replan=debounce(()=>{if(!planned)return;if(state.planMode==='dest'&&lastDest)setDest(lastDest[0],lastDest[1]);else planTrip();},650);
 
